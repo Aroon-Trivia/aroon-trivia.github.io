@@ -7,6 +7,31 @@
   pointer-events: none;
 }
 
+.ant-card {
+  margin-bottom: 20px;
+}
+
+.inline {
+  display: inline;
+}
+
+.list {
+  margin-top: 15px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+.bump-left {
+  margin-left: 10px;
+}
+
+.big-bump-left {
+  margin-left: 20px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;

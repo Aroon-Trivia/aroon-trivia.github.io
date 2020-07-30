@@ -1,39 +1,63 @@
 import React from "react";
-import {Button, Form, Input, InputNumber, PageHeader} from "antd";
+import { Button, Form, Input, InputNumber, PageHeader } from "antd";
 import socketIOClient from 'socket.io-client';
-import {socketURL} from "./Constants";
+import { answerURL, socketURL } from "./Constants";
 
 export default class GameComponent extends React.Component {
     constructor(props) {
         super(props);
-        this.state  = {question: 'Waiting for a question...', acceptAnswers: true}
+        this.state = {question: 'Waiting for a question...', questionStyle: '', acceptAnswers: false, waiting: false}
         this.submitAnswer = this.submitAnswer.bind(this);
         this.answerForm = this.answerForm.bind(this);
     }
 
     componentDidMount() {
-        const socket = socketIOClient(socketURL);
+        const socket = socketIOClient(socketURL, {
+            path: '/register', query: {
+                room: this.props.room,
+                name: this.props.name
+            }, transports: ['websocket']
+        });
         socket.on('question', data => {
-           this.setState({
-              question: data.question,
-              acceptAnswers: true
-           });
+            this.setState({
+                question: data.question,
+                questionStyle: data.questionStyle,
+                acceptAnswers: true
+            });
         });
     }
 
-    async submitAnswer() {
+    async submitAnswer(values) {
         try {
-            const response = await fetch();
+            this.setState({
+                waiting: true
+            });
+            const response = await fetch(answerURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    answer: values.answer,
+                    points: values.points,
+                    room: this.props.room,
+                    player: this.props.name
+                })
+            });
             if (response.status !== 200) {
                 alert(`Unable to submit answer. Error message: ${response.status} Response`);
             } else {
                 this.setState({
-                   question: 'Answer received! Waiting for another question...',
-                   acceptAnswers: false
+                    question: 'Answer received! Waiting for another question...',
+                    acceptAnswers: false,
                 });
             }
         } catch (e) {
             alert(`Unable to submit answer. Error message: ${e}`)
+        } finally {
+            this.setState({
+                waiting: false
+            });
         }
     }
 
@@ -50,11 +74,13 @@ export default class GameComponent extends React.Component {
             <Form.Item name="answer" label="Answer" rules={[{required: true}]}>
                 <Input size="large"/>
             </Form.Item>
-            <Form.Item name="points" label="Points" rules={[{required: true}]}>
-                <InputNumber size="large"/>
-            </Form.Item>
+            {this.state.questionStyle !== 'custom' || this.state.questionStyle !== 'pointPer' ?
+                <Form.Item name="points" label="Points" rules={[{required: true}]}>
+                    <InputNumber size="large"/>
+                </Form.Item> : null}
             <Form.Item {...tailLayout}>
-                <Button type="primary" size="large" htmlType="submit">Submit Answer</Button>
+                {this.state.waiting ? <div>Submitting answer...</div> :
+                    <Button type="primary" size="large" htmlType="submit">Submit Answer</Button>}
             </Form.Item>
         </Form>
     }
