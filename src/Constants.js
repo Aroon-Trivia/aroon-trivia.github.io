@@ -1,6 +1,7 @@
 const baseURL =  process.env.NODE_ENV === 'production' ? 'https://aroon-trivia.azurewebsites.net' : 'http://localhost:8080';
 
 export const answerURL = `${baseURL}/answer`;
+export const joinURL = `${baseURL}/join`;
 export const questionURL = `${baseURL}/question`;
 export const socketURL = `${baseURL}`;
 
