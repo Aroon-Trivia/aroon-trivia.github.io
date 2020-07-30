@@ -1,12 +1,12 @@
 import React from "react";
 import { Button, Form, Input, InputNumber, PageHeader } from "antd";
 import socketIOClient from 'socket.io-client';
-import { answerURL, socketURL } from "./Constants";
+import { answerURL, readableConnectionStatus, socketURL } from "./Constants";
 
 export default class GameComponent extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {question: 'Waiting for a question...', questionStyle: '', acceptAnswers: false, waiting: false}
+        this.state = {question: 'Waiting for a question...', questionStyle: '', acceptAnswers: false, waiting: false, connected: false}
         this.submitAnswer = this.submitAnswer.bind(this);
         this.answerForm = this.answerForm.bind(this);
     }
@@ -17,6 +17,16 @@ export default class GameComponent extends React.Component {
                 room: this.props.room,
                 name: this.props.name
             }, transports: ['websocket']
+        });
+        socket.on('connect', () => {
+            this.setState({
+               connected: true
+            });
+        });
+        socket.on('disconnect', () => {
+            this.setState({
+               connected: false
+            });
         });
         socket.on('question', data => {
             console.log(data);
@@ -90,7 +100,7 @@ export default class GameComponent extends React.Component {
 
 
         return (<div>
-                <PageHeader title={`Game ${this.props.room}`} onBack={this.props.goBack}/>
+                <PageHeader title={`Game ${this.props.room}`} onBack={this.props.goBack} subTitle={readableConnectionStatus(this.state.connected)}/>
                 <h3>Question</h3>
                 <p>{this.state.question}</p>
                 {this.state.acceptAnswers ? this.answerForm() : null}

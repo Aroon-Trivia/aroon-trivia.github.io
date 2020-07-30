@@ -19,6 +19,10 @@ export function questionStyleReadable(questionStyle) {
     }
 }
 
+export function readableConnectionStatus(status) {
+    return status ? 'Connected' : '❌ Disconnected';
+}
+
 export const wagerDesc = 'The players choose how many points to wager on their question. If they get it right, those points are added to their score. If they get it wrong, there is no penalty.';
 export const wagerLossDesc = 'The players choose how many points to wager on their question. If they get it right, those points are added to their score. If they get it wrong, those points are subtracted from their score.';
 export const pointPerDesc = 'The players get one point added to their scores if they get it right.';

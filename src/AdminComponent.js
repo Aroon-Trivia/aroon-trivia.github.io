@@ -5,7 +5,7 @@ import {
     customDesc,
     pointPerDesc,
     questionStyleReadable,
-    questionURL,
+    questionURL, readableConnectionStatus,
     socketURL,
     wagerDesc,
     wagerLossDesc
@@ -15,7 +15,7 @@ import { Option } from 'antd/lib/mentions';
 export default class AdminComponent extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {players: [], answers: [], question: '', questionStyle: '', waiting: false, asked: 0}
+        this.state = {players: [], answers: [], question: '', questionStyle: '', waiting: false, asked: 0, connected: false}
         this.mapPlayersToList = this.mapPlayersToList.bind(this);
         this.mapAnswersToList = this.mapAnswersToList.bind(this);
         this.adjustScore = this.adjustScore.bind(this);
@@ -34,6 +34,16 @@ export default class AdminComponent extends React.Component {
             path: '/register', query: {
                 room: this.props.room + '-admin'
             }, transports: ['websocket']
+        });
+        socket.on('connect', () => {
+            this.setState({
+                connected: true
+            });
+        });
+        socket.on('disconnect', () => {
+            this.setState({
+                connected: false
+            });
         });
         socket.on('submission', data => {
             this.setState(oldState => {
@@ -262,7 +272,7 @@ export default class AdminComponent extends React.Component {
 
     render() {
         return <div>
-            <PageHeader title={`Game ${this.props.room}`} onBack={this.props.goBack}/>
+            <PageHeader title={`Game ${this.props.room}`} onBack={this.props.goBack} subTitle={readableConnectionStatus(this.state.connected)}/>
             <Card title={`Players`} extra={`${this.state.players.length}`}>
                 <ul>
                     {this.mapPlayersToList(this.state.players)}
