@@ -38,7 +38,7 @@ class App extends React.Component {
     render() {
         switch (this.state.page) {
             case "admin":
-                return <AdminComponent room={this.state.room}/>
+                return <AdminComponent room={this.state.room} goBack={this.loadLogin}/>
             case "game":
                 return <GameComponent room={this.state.room} name={this.state.name} goBack={this.loadLogin}/>
             default:

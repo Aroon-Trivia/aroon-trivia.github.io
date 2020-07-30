@@ -19,6 +19,7 @@ export default class GameComponent extends React.Component {
             }, transports: ['websocket']
         });
         socket.on('question', data => {
+            console.log(data);
             this.setState({
                 question: data.question,
                 questionStyle: data.questionStyle,
@@ -74,7 +75,7 @@ export default class GameComponent extends React.Component {
             <Form.Item name="answer" label="Answer" rules={[{required: true}]}>
                 <Input size="large"/>
             </Form.Item>
-            {this.state.questionStyle !== 'custom' || this.state.questionStyle !== 'pointPer' ?
+            {this.state.questionStyle !== 'custom' && this.state.questionStyle !== 'pointPer' ?
                 <Form.Item name="points" label="Points" rules={[{required: true}]}>
                     <InputNumber size="large"/>
                 </Form.Item> : null}

@@ -1,13 +1,21 @@
 import React from "react";
-import { Button, Card, Form, Input, PageHeader, Select } from "antd";
+import { Button, Card, Checkbox, Form, Input, PageHeader, Popover, Select } from "antd";
 import socketIOClient from 'socket.io-client';
-import { questionStyleReadable, questionURL, socketURL } from './Constants';
+import {
+    customDesc,
+    pointPerDesc,
+    questionStyleReadable,
+    questionURL,
+    socketURL,
+    wagerDesc,
+    wagerLossDesc
+} from './Constants';
 import { Option } from 'antd/lib/mentions';
 
 export default class AdminComponent extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {players: [], answers: [], question: '', questionStyle: '', waiting: false}
+        this.state = {players: [], answers: [], question: '', questionStyle: '', waiting: false, asked: 0}
         this.mapPlayersToList = this.mapPlayersToList.bind(this);
         this.mapAnswersToList = this.mapAnswersToList.bind(this);
         this.adjustScore = this.adjustScore.bind(this);
@@ -16,6 +24,8 @@ export default class AdminComponent extends React.Component {
         this.pointAdjusters = this.pointAdjusters.bind(this);
         this.applyPoints = this.applyPoints.bind(this);
         this.questionForm = this.questionForm.bind(this);
+        this.toggleCorrect = this.toggleCorrect.bind(this);
+        this.waitingText = this.waitingText.bind(this);
     }
 
     // TODO: stop hacking around the duplicate state calls and fix it; see the increment function
@@ -30,9 +40,12 @@ export default class AdminComponent extends React.Component {
                 if (!(oldState.answers.find(answer => answer.player === data.player) > -1)) {
                     if (this.state.questionStyle === 'custom') {
                         data.points = 0;
-                    }
-                    if (this.state.questionStyle === 'pointPer') {
+                        data.correct = true;
+                    } else if (this.state.questionStyle === 'pointPer') {
                         data.points = 1;
+                        data.correct = false;
+                    } else {
+                        data.correct = false;
                     }
                     return {
                         answers: [data, ...oldState.answers]
@@ -59,9 +72,31 @@ export default class AdminComponent extends React.Component {
         this.setState(oldState => {
             const playerIndex = oldState.players.findIndex(player => player.name === playerName);
             const players = JSON.parse(JSON.stringify(oldState.players));
-            players[playerIndex].score = players[playerIndex].score + value;
+            players[playerIndex].score += value;
             return {
                 players: players
+            };
+        });
+    }
+
+    adjustPoints(playerName, value) {
+        this.setState(oldState => {
+            const answerIndex = oldState.answers.findIndex(answer => answer.player === playerName);
+            const answers = JSON.parse(JSON.stringify(oldState.answers));
+            answers[answerIndex].points += value;
+            return {
+                answers: answers
+            };
+        });
+    }
+
+    toggleCorrect(playerName) {
+        this.setState(oldState => {
+            const answerIndex = oldState.answers.findIndex(answer => answer.player === playerName);
+            const answers = JSON.parse(JSON.stringify(oldState.answers));
+            answers[answerIndex].correct = !answers[answerIndex].correct
+            return {
+                answers: answers
             };
         });
     }
@@ -85,6 +120,8 @@ export default class AdminComponent extends React.Component {
                 {this.state.questionStyle !== 'pointPer' ?
                     <strong className="bump-left">{answer.points}</strong> : null}
                 {this.state.questionStyle === 'custom' ? this.pointAdjusters(answer) : null}
+                {this.state.questionStyle !== 'custom' ? <Checkbox className="big-bump-left" checked={answer.correct}
+                                                                   onChange={() => this.toggleCorrect(answer.player)}>Correct</Checkbox> : null}
             </li>
         });
     }
@@ -99,53 +136,93 @@ export default class AdminComponent extends React.Component {
         )
     }
 
-    adjustPoints(playerName, value) {
-        this.setState(oldState => {
-            const answerIndex = oldState.answers.findIndex(answer => answer.player === playerName);
-            const answers = JSON.parse(JSON.stringify(oldState.answers));
-            answers[answerIndex].points = answers[answerIndex].points + value;
-            return {
-                answers: answers
-            };
+    applyPoints() {
+        this.state.answers.forEach(answer => {
+            this.setState(oldState => {
+                let players = JSON.parse(JSON.stringify(oldState.players));
+                let playerIndex = players.findIndex(player => player.name === answer.player);
+                if (answer.correct) {
+                    if (oldState.questionStyle === 'pointPer') {
+                        players[playerIndex].score += 1;
+                    } else {
+                        players[playerIndex].score += answer.points;
+                    }
+                    return {
+                        players: players
+                    }
+                } else if (oldState.questionStyle === 'wagerLoss') {
+                    players[playerIndex].score -= answer.points;
+                    return {
+                        players: players
+                    }
+                }
+            });
+        });
+        this.setState({
+            answers: [],
+            question: '',
+            questionStyle: ''
         });
     }
 
-    applyPoints() {
-
-    }
-
     async submitQuestion(values) {
-        try {
-            this.setState({
-                waiting: true
-            });
-            const response = await fetch(questionURL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    question: values.question,
-                    questionStyle: values.questionStyle,
-                    room: this.props.room
-                })
-            });
-            if (response.status !== 200) {
-                alert(`Unable to submit question. Error message: ${response.status} Response`);
-            } else {
+        let allowNewQuestion = true;
+        if (this.state.answers.length > 0) {
+            allowNewQuestion = window.confirm('You haven\'t applied the points from the last question - are you sure you want to ask a new one?');
+        }
+        if (allowNewQuestion) {
+            try {
                 this.setState({
-                    question: values.question,
-                    questionStyle: values.questionStyle,
-                    answers: []
+                    waiting: true
+                });
+                const response = await fetch(questionURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: values.question,
+                        questionStyle: values.questionStyle,
+                        room: this.props.room
+                    })
+                });
+                if (response.status !== 200) {
+                    alert(`Unable to submit question. Error message: ${response.status} Response`);
+                } else {
+                    this.setState(oldState => {
+                        return {
+                            asked: oldState.asked + 1,
+                            question: values.question,
+                            questionStyle: values.questionStyle,
+                            answers: []
+                        }
+                    });
+                }
+            } catch (e) {
+                alert(`Unable to submit question. Error message: ${e}`)
+            } finally {
+                this.setState({
+                    waiting: false
                 });
             }
-        } catch (e) {
-            alert(`Unable to submit question. Error message: ${e}`)
-        } finally {
-            this.setState({
-                waiting: false
-            });
         }
+    }
+
+    questionStyles() {
+        return (<ul>
+            <li>
+                <strong>Wager</strong><span className="bump-left">{wagerDesc}</span>
+            </li>
+            <li>
+                <strong>Wager with Loss</strong><span className="bump-left">{wagerLossDesc}</span>
+            </li>
+            <li>
+                <strong>Point-per-Question</strong><span className="bump-left">{pointPerDesc}</span>
+            </li>
+            <li>
+                <strong>Gamemaster Chooses</strong><span className="bump-left">{customDesc}</span>
+            </li>
+        </ul>)
     }
 
     questionForm() {
@@ -172,26 +249,38 @@ export default class AdminComponent extends React.Component {
             <Form.Item {...tailLayout}>
                 {this.state.waiting ? <div>Submitting question...</div> :
                     <Button type="primary" size="large" htmlType="submit">Submit Question</Button>}
+                <Popover title="Question Styles" content={this.questionStyles()} trigger="click">
+                    <Button size="large" className="bump-left">Question Style Help</Button>
+                </Popover>
             </Form.Item>
         </Form>
+    }
+
+    waitingText() {
+        return this.state.question !== '' ? 'Waiting for answers...' : 'Ask a question!';
     }
 
     render() {
         return <div>
             <PageHeader title={`Game ${this.props.room}`} onBack={this.props.goBack}/>
-            <Card title={`Players - ${this.state.players.length}`}>
+            <Card title={`Players`} extra={`${this.state.players.length}`}>
                 <ul>
                     {this.mapPlayersToList(this.state.players)}
                 </ul>
             </Card>
-            <Card title={`Answers - ${this.state.answers.length}/${this.state.players.length}`}
-                  extra={`Style: ${questionStyleReadable(this.state.questionStyle)}`}>
+            <Card title={`Answers`}
+                  extra={`${this.state.answers.length}/${this.state.players.length}`}>
+                {this.state.question !== '' ?
+                    <p><strong>{questionStyleReadable(this.state.questionStyle)}</strong> - {this.state.question}
+                    </p> : null}
                 <ul>
                     {this.mapAnswersToList(this.state.answers)}
                 </ul>
-                {this.state.answers.length > 0 ? <Button size="large" type="primary">Apply Points</Button> : null}
+                {this.state.answers.length > 0 ?
+                    <Button size="large" type="primary" onClick={this.applyPoints}>Apply Points</Button> :
+                    <i>{this.waitingText()}</i>}
             </Card>
-            <Card title="Question">
+            <Card title="Question" extra={`${this.state.asked} question${this.state.asked === 1 ? '' : 's'} asked`}>
                 {this.questionForm()}
             </Card>
         </div>;
