@@ -15,6 +15,8 @@ export default class LoginComponent extends React.Component {
             this.setState({
                 waiting: true
             });
+            values.room = values.room.trim().toUpperCase();
+            values.name = values.name.trim();
             const response = await fetch(joinURL, {
                 method: 'POST',
                 headers: {

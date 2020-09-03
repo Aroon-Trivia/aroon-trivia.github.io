@@ -50,7 +50,7 @@ export default class GameComponent extends React.Component {
                 },
                 body: JSON.stringify({
                     answer: values.answer,
-                    points: values.points,
+                    points: +values.points ? +values.points : 0,
                     room: this.props.room,
                     player: this.props.name
                 })
