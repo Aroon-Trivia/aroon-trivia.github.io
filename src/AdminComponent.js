@@ -148,7 +148,6 @@ export default class AdminComponent extends React.Component {
     }
 
     applyPoints() {
-        debugger;
         this.state.answers.forEach(answer => {
             this.setState(oldState => {
                 let players = JSON.parse(JSON.stringify(oldState.players));
