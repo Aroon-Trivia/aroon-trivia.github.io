@@ -1,6 +1,7 @@
 import { Button, Form, Input } from 'antd';
 import React from "react";
 import { joinURL } from './Constants';
+import uuid from "react-uuid";
 
 export default class LoginComponent extends React.Component {
     constructor(props) {
@@ -17,6 +18,7 @@ export default class LoginComponent extends React.Component {
             });
             values.room = values.room.trim().toUpperCase();
             values.name = values.name.trim();
+            values.id = uuid();
             const response = await fetch(joinURL, {
                 method: 'POST',
                 headers: {

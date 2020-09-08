@@ -47,7 +47,7 @@ export default class AdminComponent extends React.Component {
         });
         socket.on('submission', data => {
             this.setState(oldState => {
-                if (!(oldState.answers.find(answer => answer.player === data.player) > -1)) {
+                if (!(oldState.answers.find(answer => answer.player.id === data.player.id) > -1)) {
                     if (this.state.questionStyle === 'custom') {
                         data.points = 0;
                         data.correct = true;
@@ -63,11 +63,12 @@ export default class AdminComponent extends React.Component {
                 }
             });
         });
-        socket.on('join', playerName => {
+        socket.on('join', newPlayer => {
             this.setState(oldState => {
-                if (!(oldState.players.find(player => player.name === playerName) > -1)) {
+                if (!(oldState.players.find(playerFromList => playerFromList.id === newPlayer.id) > -1)) {
                     const player = {
-                        name: playerName,
+                        name: newPlayer.name,
+                        id: newPlayer.id,
                         score: 0
                     };
                     return {
@@ -78,9 +79,9 @@ export default class AdminComponent extends React.Component {
         });
     }
 
-    adjustScore(playerName, value) {
+    adjustScore(player, value) {
         this.setState(oldState => {
-            const playerIndex = oldState.players.findIndex(player => player.name === playerName);
+            const playerIndex = oldState.players.findIndex(playerFromList => playerFromList.id === player.id);
             const players = JSON.parse(JSON.stringify(oldState.players));
             players[playerIndex].score += value;
             return {
@@ -89,9 +90,9 @@ export default class AdminComponent extends React.Component {
         });
     }
 
-    adjustPoints(playerName, value) {
+    adjustPoints(player, value) {
         this.setState(oldState => {
-            const answerIndex = oldState.answers.findIndex(answer => answer.player === playerName);
+            const answerIndex = oldState.answers.findIndex(answer => answer.player.id === player.id);
             const answers = JSON.parse(JSON.stringify(oldState.answers));
             answers[answerIndex].points += value;
             return {
@@ -100,9 +101,9 @@ export default class AdminComponent extends React.Component {
         });
     }
 
-    toggleCorrect(playerName) {
+    toggleCorrect(player) {
         this.setState(oldState => {
-            const answerIndex = oldState.answers.findIndex(answer => answer.player === playerName);
+            const answerIndex = oldState.answers.findIndex(answer => answer.player.id === player.id);
             const answers = JSON.parse(JSON.stringify(oldState.answers));
             answers[answerIndex].correct = !answers[answerIndex].correct
             return {
@@ -116,16 +117,16 @@ export default class AdminComponent extends React.Component {
             return <li className="list" key={player.name}>
                 <strong>{player.name}</strong><span className="bump-left">{player.score}</span>
                 <Button size="small" className="big-bump-left"
-                        onClick={() => this.adjustScore(player.name, -1)}>-</Button>
-                <Button size="small" onClick={() => this.adjustScore(player.name, 1)}>+</Button>
+                        onClick={() => this.adjustScore(player, -1)}>-</Button>
+                <Button size="small" onClick={() => this.adjustScore(player, 1)}>+</Button>
             </li>
         });
     }
 
     mapAnswersToList(answers) {
         return answers.map(answer => {
-            return <li className="list" key={answer.player}>
-                <h4>{answer.player}</h4>
+            return <li className="list" key={answer.player.id}>
+                <h4>{answer.player.name}</h4>
                 <i>{answer.answer}</i>
                 {this.state.questionStyle !== 'pointPer' ?
                     <strong className="bump-left">{answer.points}</strong> : null}
@@ -147,10 +148,11 @@ export default class AdminComponent extends React.Component {
     }
 
     applyPoints() {
+        debugger;
         this.state.answers.forEach(answer => {
             this.setState(oldState => {
                 let players = JSON.parse(JSON.stringify(oldState.players));
-                let playerIndex = players.findIndex(player => player.name === answer.player);
+                let playerIndex = players.findIndex(player => player.id === answer.player.id);
                 if (answer.correct) {
                     if (oldState.questionStyle === 'pointPer') {
                         players[playerIndex].score += 1;
