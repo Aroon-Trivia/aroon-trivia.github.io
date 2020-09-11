@@ -4,6 +4,8 @@ import './App.css';
 import LoginComponent from "./LoginComponent";
 import GameComponent from "./GameComponent";
 import AdminComponent from "./AdminComponent";
+import * as cookie from "react-cookies";
+import {tomorrow} from "./Utils";
 
 class App extends React.Component {
     constructor(props) {
@@ -14,14 +16,29 @@ class App extends React.Component {
         this.loadLogin = this.loadLogin.bind(this);
         this.saveCookie = this.saveCookie.bind(this);
         this.checkForCookie = this.checkForCookie.bind(this);
+        this.clearCookie = this.clearCookie.bind(this);
+    }
+
+    componentDidMount() {
+        this.loadGame(this.checkForCookie());
     }
 
     saveCookie() {
-
+        cookie.save('gamestate', {
+            room: this.state.room,
+            name: this.state.name,
+            id: this.state.id
+        }, {
+            expires: tomorrow()
+        });
     }
 
     checkForCookie() {
+        return cookie.load('gamestate');
+    }
 
+    clearCookie() {
+        cookie.remove('gamestate');
     }
 
     loadGame(loginValues) {
@@ -31,6 +48,7 @@ class App extends React.Component {
             id: loginValues.id,
             page: 'game'
         });
+        this.saveCookie();
     }
 
     loadAdmin(room) {
@@ -46,12 +64,18 @@ class App extends React.Component {
         });
     }
 
+    backToLogin() {
+        this.clearCookie();
+        this.loadLogin();
+    }
+
     render() {
         switch (this.state.page) {
             case "admin":
-                return <AdminComponent room={this.state.room} goBack={this.loadLogin}/>
+                return <AdminComponent room={this.state.room} goBack={this.backToLogin}/>
             case "game":
-                return <GameComponent room={this.state.room} name={this.state.name} id={this.state.id} goBack={this.loadLogin}/>
+                return <GameComponent room={this.state.room} name={this.state.name} id={this.state.id}
+                                      goBack={this.backToLogin}/>
             default:
                 return <LoginComponent joinGame={this.loadGame} createGame={this.loadAdmin}/>
         }
